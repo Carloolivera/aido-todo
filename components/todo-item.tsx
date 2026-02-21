@@ -1,11 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Pencil } from "lucide-react";
+import { TodoEditDialog } from "./todo-edit-dialog";
+import { getDueDateLabel, getDaysUntilDue } from "@/lib/date-utils";
 
 interface Todo {
   id: string;
@@ -37,31 +52,34 @@ const PRIORITY_LABELS: Record<string, string> = {
   URGENT: "Urgente",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Pendiente",
-  IN_PROGRESS: "En progreso",
-  COMPLETED: "Completada",
-};
-
 export function TodoItem({ todo, onUpdated, onDeleted }: TodoItemProps) {
   const [loading, setLoading] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   async function updateStatus(newStatus: string) {
     setLoading(true);
-    await fetch(`/api/todos/${todo.id}`, {
+    const res = await fetch(`/api/todos/${todo.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
     });
+    if (res.ok) {
+      toast.success("Estado actualizado");
+    }
     onUpdated();
     setLoading(false);
   }
 
   async function deleteTodo() {
-    if (!confirm("¿Eliminar esta tarea?")) return;
     setLoading(true);
-    await fetch(`/api/todos/${todo.id}`, { method: "DELETE" });
-    onDeleted();
+    const res = await fetch(`/api/todos/${todo.id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Tarea eliminada");
+      onDeleted();
+    } else {
+      toast.error("No se pudo eliminar la tarea");
+      setLoading(false);
+    }
   }
 
   const isCompleted = todo.status === "COMPLETED";
@@ -123,25 +141,70 @@ export function TodoItem({ todo, onUpdated, onDeleted }: TodoItemProps) {
                     Vencida
                   </Badge>
                 )}
-                {todo.dueDate && (
-                  <span className={`text-xs ${isOverdue ? "text-red-500 font-medium" : "text-muted-foreground"}`}>
-                    {new Date(todo.dueDate).toLocaleDateString("es-AR")}
+                {todo.dueDate && !isCompleted && (
+                  <span className={`text-xs ${
+                    isOverdue
+                      ? "text-red-500 font-medium"
+                      : getDaysUntilDue(todo.dueDate) <= 2
+                        ? "text-amber-500 font-medium"
+                        : "text-muted-foreground"
+                  }`}>
+                    {getDueDateLabel(todo.dueDate)}
                   </span>
                 )}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
-                onClick={deleteTodo}
-                disabled={loading}
-              >
-                Eliminar
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowEdit(true)}
+                  disabled={loading}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span className="sr-only">Editar</span>
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                      disabled={loading}
+                    >
+                      Eliminar
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Eliminar tarea</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción no se puede deshacer. Se eliminará permanentemente la tarea &quot;{todo.title}&quot;.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={deleteTodo}
+                        className="bg-red-500 hover:bg-red-600"
+                      >
+                        Eliminar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </div>
           </div>
         </div>
       </CardContent>
+
+      <TodoEditDialog
+        todo={todo}
+        open={showEdit}
+        onClose={() => setShowEdit(false)}
+        onUpdated={onUpdated}
+      />
     </Card>
   );
 }

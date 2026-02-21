@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,13 +8,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
-interface TodoFormProps {
-  open: boolean;
-  onClose: () => void;
-  onCreated: () => void;
+interface Todo {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: string;
+  dueDate: string | null;
 }
 
-export function TodoForm({ open, onClose, onCreated }: TodoFormProps) {
+interface TodoEditDialogProps {
+  todo: Todo | null;
+  open: boolean;
+  onClose: () => void;
+  onUpdated: () => void;
+}
+
+export function TodoEditDialog({ todo, open, onClose, onUpdated }: TodoEditDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
@@ -23,44 +31,55 @@ export function TodoForm({ open, onClose, onCreated }: TodoFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (todo) {
+      setTitle(todo.title);
+      setDescription(todo.description ?? "");
+      setPriority(todo.priority);
+      setDueDate(
+        todo.dueDate ? new Date(todo.dueDate).toISOString().split("T")[0] : ""
+      );
+      setError("");
+    }
+  }, [todo]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || !todo) return;
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/todos", {
-      method: "POST",
+    const res = await fetch(`/api/todos/${todo.id}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description, priority, dueDate: dueDate || null }),
+      body: JSON.stringify({
+        title,
+        description: description || null,
+        priority,
+        dueDate: dueDate || null,
+      }),
     });
 
     if (res.ok) {
-      toast.success("Tarea creada");
-      setTitle("");
-      setDescription("");
-      setPriority("MEDIUM");
-      setDueDate("");
       onClose();
-      onCreated();
+      onUpdated();
     } else {
-      setError("No se pudo crear la tarea. Intentá de nuevo.");
-      setLoading(false);
+      setError("No se pudo guardar. Intentá de nuevo.");
     }
+    setLoading(false);
   }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Nueva tarea</DialogTitle>
+          <DialogTitle>Editar tarea</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Título *</Label>
+            <Label htmlFor="edit-title">Título *</Label>
             <Input
-              id="title"
-              placeholder="¿Qué tenés que hacer?"
+              id="edit-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -68,9 +87,9 @@ export function TodoForm({ open, onClose, onCreated }: TodoFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Descripción</Label>
+            <Label htmlFor="edit-description">Descripción</Label>
             <Textarea
-              id="description"
+              id="edit-description"
               placeholder="Detalles opcionales..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -93,9 +112,9 @@ export function TodoForm({ open, onClose, onCreated }: TodoFormProps) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dueDate">Fecha límite</Label>
+              <Label htmlFor="edit-dueDate">Fecha límite</Label>
               <Input
-                id="dueDate"
+                id="edit-dueDate"
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
@@ -108,7 +127,7 @@ export function TodoForm({ open, onClose, onCreated }: TodoFormProps) {
               Cancelar
             </Button>
             <Button type="submit" disabled={loading || !title.trim()}>
-              {loading ? "Guardando..." : "Crear tarea"}
+              {loading ? "Guardando..." : "Guardar cambios"}
             </Button>
           </DialogFooter>
         </form>
