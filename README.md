@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# aido-todo
 
-## Getting Started
+Todo app completa con autenticación, dashboard con gráficos, dark mode y 40+ tests.
 
-First, run the development server:
+**Demo:** [aido-todo.vercel.app](https://aido-todo.vercel.app)
+**Credenciales demo:** `demo@aido.dev` / `password123`
+
+---
+
+## Stack
+
+| Capa | Tecnología |
+|------|-----------|
+| Framework | Next.js 16 (App Router + Turbopack) |
+| UI | React 19 + Tailwind CSS v4 + shadcn/ui |
+| Base de datos | PostgreSQL (Neon serverless) |
+| ORM | Prisma 7 (Driver Adapter) |
+| Auth | NextAuth v5 (Credentials) |
+| Testing | Vitest + Testing Library (40+ tests) |
+| Charts | Recharts |
+| Deploy | Vercel |
+
+## Features
+
+- **Auth completo** — registro, login, logout con bcrypt + JWT
+- **CRUD de tareas** — crear, editar, eliminar con validación Zod
+- **Prioridades** — Urgent, High, Medium, Low con badges de color
+- **Estados** — Pending, In Progress, Completed
+- **Due dates** — con indicadores de overdue/today/upcoming
+- **Filtros y búsqueda** — por estado, texto, ordenamiento múltiple
+- **Dashboard con gráficos** — DonutChart + BarChart (Recharts)
+- **Dark mode** — toggle con next-themes
+- **Responsive** — mobile-first
+- **40+ tests** — componentes + utilidades con Vitest
+
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/Carloolivera/aido-todo.git
+cd aido-todo
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Crear `.env.local`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+DATABASE_URL="postgresql://..."     # Neon connection string
+AUTH_SECRET="..."                    # openssl rand -base64 32
+NEXTAUTH_URL="http://localhost:3000"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+O con Vercel CLI: `vercel env pull .env.local --yes`
 
-## Learn More
+```bash
+npx prisma db push
+npx prisma db seed     # Carga datos demo
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## API Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+POST   /api/register         → crear usuario
+GET    /api/todos             → listar tareas
+POST   /api/todos             → crear tarea
+PUT    /api/todos/[id]        → actualizar tarea
+DELETE /api/todos/[id]        → eliminar tarea
+GET    /api/stats             → estadísticas
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Testing
 
-## Deploy on Vercel
+```bash
+npm test              # Correr 40+ tests
+npm run test:watch    # Watch mode
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev           # Dev server (Turbopack)
+npm run build         # Build producción
+npm test              # Vitest
+npm run db:seed       # Seed datos demo
+npm run db:studio     # Prisma Studio (GUI)
+```
+
+---
+
+Desarrollado por [AIDO Digital Agency](https://aidoagencia.com) · Chascomús, Buenos Aires
