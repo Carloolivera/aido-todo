@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { TodoItem } from "./todo-item";
@@ -51,14 +52,39 @@ export function TodoList({ userName, userEmail }: TodoListProps) {
   const [sortBy, setSortBy] = useState<SortBy>("createdAt");
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const notifiedRef = useRef(false);
 
   const fetchTodos = useCallback(async () => {
     setLoading(true);
     const res = await fetch("/api/todos");
     if (res.ok) {
-      const data = await res.json();
+      const data: Todo[] = await res.json();
       setTodos(data);
       setRefreshKey((k) => k + 1);
+
+      if (!notifiedRef.current) {
+        notifiedRef.current = true;
+        const now = new Date();
+        const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const active = data.filter((t) => t.status !== "COMPLETED" && t.dueDate);
+        const overdue = active.filter((t) => new Date(t.dueDate!) < now);
+        const dueSoon = active.filter(
+          (t) => new Date(t.dueDate!) >= now && new Date(t.dueDate!) <= in24h
+        );
+
+        if (overdue.length > 0) {
+          toast.error(
+            `${overdue.length} tarea${overdue.length > 1 ? "s vencidas" : " vencida"}`,
+            { description: overdue.map((t) => t.title).join(", ") }
+          );
+        }
+        if (dueSoon.length > 0) {
+          toast.warning(
+            `${dueSoon.length} tarea${dueSoon.length > 1 ? "s vencen" : " vence"} en las próximas 24hs`,
+            { description: dueSoon.map((t) => t.title).join(", ") }
+          );
+        }
+      }
     }
     setLoading(false);
   }, []);
