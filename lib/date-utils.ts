@@ -1,6 +1,6 @@
 // Parsea "YYYY-MM-DD" como fecha local (evita el desfase UTC en zonas != UTC)
 function parseLocalDate(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
+  const [y, m, d] = dateStr.split("T")[0].split("-").map(Number);
   const date = new Date(y, m - 1, d);
   date.setHours(0, 0, 0, 0);
   return date;
