@@ -9,6 +9,22 @@ import { TodoForm } from "./todo-form";
 import { TodoFilters } from "./todo-filters";
 import { ThemeToggle } from "./theme-toggle";
 import { StatsPanel } from "./stats-panel";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 
 interface Todo {
   id: string;
@@ -42,6 +58,41 @@ const STATUS_ORDER: Record<string, number> = {
   COMPLETED: 2,
 };
 
+function SortableTodoItem({
+  todo,
+  onUpdated,
+  onDeleted,
+}: {
+  todo: Todo;
+  onUpdated: () => void;
+  onDeleted: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: todo.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-start gap-1">
+      <button
+        {...attributes}
+        {...listeners}
+        className="mt-3 p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+        aria-label="Arrastrar para reordenar"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="flex-1">
+        <TodoItem todo={todo} onUpdated={onUpdated} onDeleted={onDeleted} />
+      </div>
+    </div>
+  );
+}
+
 export function TodoList({ userName, userEmail }: TodoListProps) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [filteredTodos, setFilteredTodos] = useState<Todo[]>([]);
@@ -53,6 +104,18 @@ export function TodoList({ userName, userEmail }: TodoListProps) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const notifiedRef = useRef(false);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setFilteredTodos((prev) => {
+      const oldIndex = prev.findIndex((t) => t.id === active.id);
+      const newIndex = prev.findIndex((t) => t.id === over.id);
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  };
 
   const fetchTodos = useCallback(async () => {
     setLoading(true);
@@ -282,16 +345,27 @@ export function TodoList({ userName, userEmail }: TodoListProps) {
           </div>
         ) : (
           <>
-            <div className="space-y-3">
-              {paginatedTodos.map((todo) => (
-                <TodoItem
-                  key={todo.id}
-                  todo={todo}
-                  onUpdated={fetchTodos}
-                  onDeleted={fetchTodos}
-                />
-              ))}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={paginatedTodos.map((t) => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3">
+                  {paginatedTodos.map((todo) => (
+                    <SortableTodoItem
+                      key={todo.id}
+                      todo={todo}
+                      onUpdated={fetchTodos}
+                      onDeleted={fetchTodos}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between pt-2">
