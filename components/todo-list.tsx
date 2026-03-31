@@ -26,6 +26,8 @@ interface TodoListProps {
 
 type SortBy = "createdAt" | "priority" | "dueDate" | "status";
 
+const ITEMS_PER_PAGE = 10;
+
 const PRIORITY_ORDER: Record<string, number> = {
   URGENT: 0,
   HIGH: 1,
@@ -48,6 +50,7 @@ export function TodoList({ userName, userEmail }: TodoListProps) {
   const [searchFilter, setSearchFilter] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("createdAt");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchTodos = useCallback(async () => {
     setLoading(true);
@@ -103,7 +106,14 @@ export function TodoList({ userName, userEmail }: TodoListProps) {
     });
 
     setFilteredTodos(result);
+    setCurrentPage(1);
   }, [todos, statusFilter, searchFilter, sortBy]);
+
+  const totalPages = Math.ceil(filteredTodos.length / ITEMS_PER_PAGE);
+  const paginatedTodos = filteredTodos.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const completedCount = todos.filter((t) => t.status === "COMPLETED").length;
   const pendingCount = todos.filter((t) => t.status === "PENDING").length;
@@ -215,16 +225,42 @@ export function TodoList({ userName, userEmail }: TodoListProps) {
             )}
           </div>
         ) : (
-          <div className="space-y-3">
-            {filteredTodos.map((todo) => (
-              <TodoItem
-                key={todo.id}
-                todo={todo}
-                onUpdated={fetchTodos}
-                onDeleted={fetchTodos}
-              />
-            ))}
-          </div>
+          <>
+            <div className="space-y-3">
+              {paginatedTodos.map((todo) => (
+                <TodoItem
+                  key={todo.id}
+                  todo={todo}
+                  onUpdated={fetchTodos}
+                  onDeleted={fetchTodos}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                  disabled={currentPage === 1}
+                >
+                  ← Anterior
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Siguiente →
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </main>
 
