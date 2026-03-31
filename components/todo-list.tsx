@@ -115,6 +115,29 @@ export function TodoList({ userName, userEmail }: TodoListProps) {
     currentPage * ITEMS_PER_PAGE
   );
 
+  const exportToCSV = () => {
+    const headers = ["Título", "Descripción", "Estado", "Prioridad", "Fecha límite", "Creado el"];
+    const rows = filteredTodos.map((t) => [
+      t.title,
+      t.description ?? "",
+      t.status,
+      t.priority,
+      t.dueDate ? new Date(t.dueDate).toLocaleDateString("es-AR") : "",
+      new Date(t.createdAt).toLocaleDateString("es-AR"),
+    ]);
+
+    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const csv = [headers, ...rows].map((row) => row.map(escape).join(",")).join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tareas-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const completedCount = todos.filter((t) => t.status === "COMPLETED").length;
   const pendingCount = todos.filter((t) => t.status === "PENDING").length;
   const inProgressCount = todos.filter(
@@ -186,7 +209,14 @@ export function TodoList({ userName, userEmail }: TodoListProps) {
         {/* Actions */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Mis tareas</h2>
-          <Button onClick={() => setShowForm(true)}>+ Nueva tarea</Button>
+          <div className="flex items-center gap-2">
+            {filteredTodos.length > 0 && (
+              <Button variant="outline" size="sm" onClick={exportToCSV}>
+                Exportar CSV
+              </Button>
+            )}
+            <Button onClick={() => setShowForm(true)}>+ Nueva tarea</Button>
+          </div>
         </div>
 
         <Separator />
